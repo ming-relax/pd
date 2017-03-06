@@ -259,6 +259,7 @@ func newTransferLeader(region *regionInfo, newLeader *metapb.Peer) Operator {
 
 // scheduleAddPeer schedules a new peer.
 func scheduleAddPeer(cluster *clusterInfo, s Selector, filters ...Filter) *metapb.Peer {
+	cluster.updateStoreStats()
 	stores := cluster.getStores()
 
 	target := s.SelectTarget(stores, filters...)
@@ -277,6 +278,7 @@ func scheduleAddPeer(cluster *clusterInfo, s Selector, filters ...Filter) *metap
 
 // scheduleRemovePeer schedules a region to remove the peer.
 func scheduleRemovePeer(cluster *clusterInfo, s Selector, filters ...Filter) (*regionInfo, *metapb.Peer) {
+	cluster.updateStoreStats()
 	stores := cluster.getStores()
 
 	source := s.SelectSource(stores, filters...)
@@ -297,6 +299,7 @@ func scheduleRemovePeer(cluster *clusterInfo, s Selector, filters ...Filter) (*r
 
 // scheduleTransferLeader schedules a region to transfer leader to the peer.
 func scheduleTransferLeader(cluster *clusterInfo, s Selector, filters ...Filter) (*regionInfo, *metapb.Peer) {
+	cluster.updateStoreStats()
 	sourceStores := cluster.getStores()
 
 	source := s.SelectSource(sourceStores, filters...)

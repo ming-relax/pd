@@ -173,6 +173,7 @@ func (s *testBalanceSpeedSuite) testBalanceSpeed(c *C, tests []testBalanceSpeedC
 	for _, t := range tests {
 		tc.addLeaderStore(1, int(t.sourceCount))
 		tc.addLeaderStore(2, int(t.targetCount))
+		cluster.updateStoreStats()
 		source := cluster.getStore(1)
 		target := cluster.getStore(2)
 		c.Assert(shouldBalance(source, target, leaderKind), Equals, t.expectedResult)
@@ -181,6 +182,7 @@ func (s *testBalanceSpeedSuite) testBalanceSpeed(c *C, tests []testBalanceSpeedC
 	for _, t := range tests {
 		tc.addRegionStore(1, int(t.sourceCount))
 		tc.addRegionStore(2, int(t.targetCount))
+		cluster.updateStoreStats()
 		source := cluster.getStore(1)
 		target := cluster.getStore(2)
 		c.Assert(shouldBalance(source, target, regionKind), Equals, t.expectedResult)

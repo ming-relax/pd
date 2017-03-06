@@ -430,8 +430,9 @@ func (c *RaftCluster) collectMetrics() {
 	storeTombstoneCount := 0
 	storageSize := uint64(0)
 	storageCapacity := uint64(0)
-	minLeaderScore, maxLeaderScore := math.MaxFloat64, float64(0.0)
-	minRegionScore, maxRegionScore := math.MaxFloat64, float64(0.0)
+	// Count leaders/peers that need be balanced.
+	leaderBalanceWorkload := 0.0
+	regionBalanceWorkload := 0.0
 
 	for _, s := range cluster.getStores() {
 		// Store state.
@@ -455,10 +456,8 @@ func (c *RaftCluster) collectMetrics() {
 		storageCapacity += s.stats.GetCapacity()
 
 		// Balance score.
-		minLeaderScore = math.Min(minLeaderScore, s.leaderScore())
-		maxLeaderScore = math.Max(maxLeaderScore, s.leaderScore())
-		minRegionScore = math.Min(minRegionScore, s.regionScore())
-		maxRegionScore = math.Max(maxRegionScore, s.regionScore())
+		leaderBalanceWorkload += math.Abs(s.leaderScore())
+		regionBalanceWorkload += math.Abs(s.regionScore())
 	}
 
 	metrics := make(map[string]float64)
@@ -469,8 +468,8 @@ func (c *RaftCluster) collectMetrics() {
 	metrics["region_count"] = float64(cluster.getRegionCount())
 	metrics["storage_size"] = float64(storageSize)
 	metrics["storage_capacity"] = float64(storageCapacity)
-	metrics["leader_balance_ratio"] = 1 - minLeaderScore/maxLeaderScore
-	metrics["region_balance_ratio"] = 1 - minRegionScore/maxRegionScore
+	metrics["leader_balance_ratio"] = 1 - leaderBalanceWorkload/2/float64(cluster.getRegionCount())
+	metrics["region_balance_ratio"] = 1 - regionBalanceWorkload/2/float64(cluster.getPeerCount())
 
 	for label, value := range metrics {
 		clusterStatusGauge.WithLabelValues(label).Set(value)

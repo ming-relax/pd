@@ -17,7 +17,6 @@ import (
 	"math"
 	"time"
 
-	"github.com/montanaflynn/stats"
 	"github.com/ngaut/log"
 	"github.com/pingcap/kvproto/pkg/metapb"
 )
@@ -41,25 +40,21 @@ func minBalanceDiff(count uint64) float64 {
 // The min balance diff provides a buffer to make the cluster stable, so that we
 // don't need to schedule very frequently.
 func shouldBalance(source, target *storeInfo, kind ResourceKind) bool {
-	sourceCount := source.resourceCount(kind)
 	sourceScore := source.resourceScore(kind)
 	targetScore := target.resourceScore(kind)
-	if targetScore >= sourceScore {
+	if sourceScore < 0 || targetScore > 0 {
 		return false
 	}
-	diffRatio := 1 - targetScore/sourceScore
-	diffCount := diffRatio * float64(sourceCount)
-	return diffCount >= minBalanceDiff(sourceCount)
+	return sourceScore-targetScore >= minBalanceDiff(source.resourceCount(kind))
 }
 
 func adjustBalanceLimit(cluster *clusterInfo, kind ResourceKind) uint64 {
 	stores := cluster.getStores()
-	counts := make([]float64, 0, len(stores))
+	var squareScore float64
 	for _, s := range stores {
-		counts = append(counts, float64(s.resourceCount(kind)))
+		squareScore += s.resourceScore(kind) * s.resourceScore(kind)
 	}
-	limit, _ := stats.StandardDeviation(stats.Float64Data(counts))
-	return maxUint64(1, uint64(limit))
+	return maxUint64(1, uint64(math.Sqrt(squareScore)))
 }
 
 type balanceLeaderScheduler struct {

@@ -228,6 +228,17 @@ func (r *regionsInfo) getStoreFollowerCount(storeID uint64) int {
 	return len(r.followers[storeID])
 }
 
+func (r *regionsInfo) getPeerCount() int {
+	var count int
+	for _, m := range r.leaders {
+		count += len(m)
+	}
+	for _, m := range r.followers {
+		count += len(m)
+	}
+	return count
+}
+
 func (r *regionsInfo) randLeaderRegion(storeID uint64) *regionInfo {
 	return randRegion(r.leaders[storeID])
 }
@@ -447,6 +458,12 @@ func (c *clusterInfo) getStoreLeaderCount(storeID uint64) int {
 	return c.regions.getStoreLeaderCount(storeID)
 }
 
+func (c *clusterInfo) getPeerCount() int {
+	c.RLock()
+	defer c.RUnlock()
+	return c.regions.getPeerCount()
+}
+
 func (c *clusterInfo) randLeaderRegion(storeID uint64) *regionInfo {
 	c.RLock()
 	defer c.RUnlock()
@@ -481,6 +498,28 @@ func (c *clusterInfo) getFollowerStores(region *regionInfo) []*storeInfo {
 		}
 	}
 	return stores
+}
+
+func (c *clusterInfo) updateStoreStats() {
+	c.Lock()
+	defer c.Unlock()
+
+	var totalLeaderWeight, totalRegionWeight float64
+	var totalLeaderCount, totalRegionCount int
+	for _, s := range c.stores.stores {
+		totalLeaderWeight += s.stats.LeaderBalanceWeight
+		totalRegionWeight += s.stats.RegionBalanceWeight
+		totalLeaderCount += int(s.stats.LeaderCount)
+		totalRegionCount += int(s.stats.GetRegionCount())
+	}
+	if totalLeaderWeight == 0 || totalRegionWeight == 0 {
+		return
+	}
+
+	for _, s := range c.stores.stores {
+		s.stats.IntentLeaderCount = int(float64(totalLeaderCount) * s.stats.LeaderBalanceWeight / totalLeaderWeight)
+		s.stats.IntentRegionCount = int(float64(totalRegionCount) * s.stats.RegionBalanceWeight / totalRegionWeight)
+	}
 }
 
 // handleStoreHeartbeat updates the store status.

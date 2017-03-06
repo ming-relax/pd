@@ -84,7 +84,7 @@ func (s *storeInfo) leaderCount() uint64 {
 }
 
 func (s *storeInfo) leaderScore() float64 {
-	return float64(s.stats.LeaderCount)
+	return float64(int(s.stats.LeaderCount) - s.stats.IntentLeaderCount)
 }
 
 func (s *storeInfo) regionCount() uint64 {
@@ -92,10 +92,7 @@ func (s *storeInfo) regionCount() uint64 {
 }
 
 func (s *storeInfo) regionScore() float64 {
-	if s.stats.GetCapacity() == 0 {
-		return 0
-	}
-	return float64(s.stats.RegionCount) / float64(s.stats.GetCapacity())
+	return float64(int(s.stats.RegionCount) - s.stats.IntentRegionCount)
 }
 
 func (s *storeInfo) storageSize() uint64 {
@@ -160,20 +157,31 @@ type StoreStatus struct {
 	blocked         bool
 	LeaderCount     uint32    `json:"leader_count"`
 	LastHeartbeatTS time.Time `json:"last_heartbeat_ts"`
+
+	LeaderBalanceWeight float64 `json:"leader_balance_weight"`
+	RegionBalanceWeight float64 `json:"region_balance_weight"`
+	IntentLeaderCount   int     `json:"intent_leader_count"`
+	IntentRegionCount   int     `json:"intent_region_count"`
 }
 
 func newStoreStatus() *StoreStatus {
 	return &StoreStatus{
-		StoreStats: &pdpb.StoreStats{},
+		StoreStats:          &pdpb.StoreStats{},
+		LeaderBalanceWeight: 1.0,
+		RegionBalanceWeight: 1.0,
 	}
 }
 
 func (s *StoreStatus) clone() *StoreStatus {
 	return &StoreStatus{
-		StoreStats:      proto.Clone(s.StoreStats).(*pdpb.StoreStats),
-		blocked:         s.blocked,
-		LeaderCount:     s.LeaderCount,
-		LastHeartbeatTS: s.LastHeartbeatTS,
+		StoreStats:          proto.Clone(s.StoreStats).(*pdpb.StoreStats),
+		blocked:             s.blocked,
+		LeaderCount:         s.LeaderCount,
+		LastHeartbeatTS:     s.LastHeartbeatTS,
+		LeaderBalanceWeight: s.LeaderBalanceWeight,
+		RegionBalanceWeight: s.RegionBalanceWeight,
+		IntentLeaderCount:   s.IntentLeaderCount,
+		IntentRegionCount:   s.IntentRegionCount,
 	}
 }
 
