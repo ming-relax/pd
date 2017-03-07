@@ -404,6 +404,36 @@ func (c *RaftCluster) BuryStore(storeID uint64, force bool) error {
 	return cluster.putStore(store)
 }
 
+// SetStoreLeaderWeight sets up a store's leader balance weight.
+func (c *RaftCluster) SetStoreLeaderWeight(storeID uint64, weight float64) error {
+	c.Lock()
+	defer c.Unlock()
+
+	store := c.cachedCluster.getStore(storeID)
+	if store == nil {
+		return errors.Trace(errStoreNotFound(storeID))
+	}
+
+	store.stats.LeaderBalanceWeight = weight
+
+	return c.cachedCluster.putStore(store)
+}
+
+// SetStoreRegionWeight sets up a store's region balance weight.
+func (c *RaftCluster) SetStoreRegionWeight(storeID uint64, weight float64) error {
+	c.Lock()
+	defer c.Unlock()
+
+	store := c.cachedCluster.getStore(storeID)
+	if store == nil {
+		return errors.Trace(errStoreNotFound(storeID))
+	}
+
+	store.stats.RegionBalanceWeight = weight
+
+	return c.cachedCluster.putStore(store)
+}
+
 func (c *RaftCluster) checkStores() {
 	cluster := c.cachedCluster
 	for _, store := range cluster.getMetaStores() {

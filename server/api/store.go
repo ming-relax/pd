@@ -33,15 +33,19 @@ type metaStore struct {
 }
 
 type storeStatus struct {
-	StoreID            uint64            `json:"store_id"`
-	Capacity           typeutil.ByteSize `json:"capacity"`
-	Available          typeutil.ByteSize `json:"available"`
-	LeaderCount        uint32            `json:"leader_count"`
-	RegionCount        uint32            `json:"region_count"`
-	SendingSnapCount   uint32            `json:"sending_snap_count"`
-	ReceivingSnapCount uint32            `json:"receiving_snap_count"`
-	ApplyingSnapCount  uint32            `json:"applying_snap_count"`
-	IsBusy             bool              `json:"is_busy"`
+	StoreID             uint64            `json:"store_id"`
+	Capacity            typeutil.ByteSize `json:"capacity"`
+	Available           typeutil.ByteSize `json:"available"`
+	LeaderCount         uint32            `json:"leader_count"`
+	RegionCount         uint32            `json:"region_count"`
+	SendingSnapCount    uint32            `json:"sending_snap_count"`
+	ReceivingSnapCount  uint32            `json:"receiving_snap_count"`
+	ApplyingSnapCount   uint32            `json:"applying_snap_count"`
+	IsBusy              bool              `json:"is_busy"`
+	LeaderBalanceWeight float64           `json:"leader_balance_weight"`
+	RegionBalanceWeight float64           `json:"region_balance_weight"`
+	IntentLeaderCount   int               `json:"intent_leader_count"`
+	IntentRegionCount   int               `json:"intent_region_count"`
 
 	StartTS         time.Time         `json:"start_ts"`
 	LastHeartbeatTS time.Time         `json:"last_heartbeat_ts"`
@@ -60,18 +64,22 @@ func newStoreInfo(store *metapb.Store, status *server.StoreStatus) *storeInfo {
 			StateName: store.State.String(),
 		},
 		Status: &storeStatus{
-			StoreID:            status.StoreId,
-			Capacity:           typeutil.ByteSize(status.Capacity),
-			Available:          typeutil.ByteSize(status.Available),
-			LeaderCount:        status.LeaderCount,
-			RegionCount:        status.RegionCount,
-			SendingSnapCount:   status.SendingSnapCount,
-			ReceivingSnapCount: status.ReceivingSnapCount,
-			ApplyingSnapCount:  status.ApplyingSnapCount,
-			IsBusy:             status.IsBusy,
-			StartTS:            status.GetStartTS(),
-			LastHeartbeatTS:    status.LastHeartbeatTS,
-			Uptime:             typeutil.NewDuration(status.GetUptime()),
+			StoreID:             status.StoreId,
+			Capacity:            typeutil.ByteSize(status.Capacity),
+			Available:           typeutil.ByteSize(status.Available),
+			LeaderCount:         status.LeaderCount,
+			RegionCount:         status.RegionCount,
+			SendingSnapCount:    status.SendingSnapCount,
+			ReceivingSnapCount:  status.ReceivingSnapCount,
+			ApplyingSnapCount:   status.ApplyingSnapCount,
+			IsBusy:              status.IsBusy,
+			LeaderBalanceWeight: status.LeaderBalanceWeight,
+			RegionBalanceWeight: status.RegionBalanceWeight,
+			IntentLeaderCount:   status.IntentLeaderCount,
+			IntentRegionCount:   status.IntentRegionCount,
+			StartTS:             status.GetStartTS(),
+			LastHeartbeatTS:     status.LastHeartbeatTS,
+			Uptime:              typeutil.NewDuration(status.GetUptime()),
 		},
 	}
 }
@@ -143,6 +151,54 @@ func (h *storeHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		h.rd.JSON(w, http.StatusInternalServerError, err.Error())
 		return
+	}
+
+	h.rd.JSON(w, http.StatusOK, nil)
+}
+
+func (h *storeHandler) SetWeight(w http.ResponseWriter, r *http.Request) {
+	cluster := h.svr.GetRaftCluster()
+	if cluster == nil {
+		h.rd.JSON(w, http.StatusInternalServerError, errNotBootstrapped.Error())
+		return
+	}
+
+	vars := mux.Vars(r)
+	storeIDStr := vars["id"]
+	storeID, err := strconv.ParseUint(storeIDStr, 10, 64)
+	if err != nil {
+		h.rd.JSON(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	var input map[string]interface{}
+	if err := readJSON(r.Body, &input); err != nil {
+		h.rd.JSON(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	if val, ok := input["leader"]; ok {
+		weight, ok := val.(float64)
+		if !ok {
+			h.rd.JSON(w, http.StatusBadRequest, "badformat weight")
+			return
+		}
+		if err := cluster.SetStoreLeaderWeight(storeID, weight); err != nil {
+			h.rd.JSON(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+	}
+
+	if val, ok := input["region"]; ok {
+		weight, ok := val.(float64)
+		if !ok {
+			h.rd.JSON(w, http.StatusBadRequest, "badformat weight")
+			return
+		}
+		if err := cluster.SetStoreRegionWeight(storeID, weight); err != nil {
+			h.rd.JSON(w, http.StatusInternalServerError, err.Error())
+			return
+		}
 	}
 
 	h.rd.JSON(w, http.StatusOK, nil)
