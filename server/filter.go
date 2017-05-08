@@ -100,6 +100,9 @@ func newStateFilter(opt *scheduleOption) *stateFilter {
 }
 
 func (f *stateFilter) filter(store *storeInfo) bool {
+	if store.isStall() {
+		return true
+	}
 	return !store.isUp()
 }
 

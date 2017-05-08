@@ -64,6 +64,10 @@ func (s *storeInfo) isBlocked() bool {
 	return s.status.blocked
 }
 
+func (s *storeInfo) isStall() bool {
+	return s.status.GetStallMicros() > 0
+}
+
 func (s *storeInfo) isUp() bool {
 	return s.GetState() == metapb.StoreState_Up
 }

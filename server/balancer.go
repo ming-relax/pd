@@ -59,6 +59,9 @@ func adjustBalanceLimit(cluster *clusterInfo, kind ResourceKind) uint64 {
 	stores := cluster.getStores()
 	counts := make([]float64, 0, len(stores))
 	for _, s := range stores {
+		if s.isStall() {
+			continue
+		}
 		if s.isUp() {
 			counts = append(counts, float64(s.resourceCount(kind)))
 		}
@@ -355,6 +358,25 @@ func (r *replicaChecker) checkOfflinePeer(region *RegionInfo) Operator {
 		return newTransferPeer(region, peer, newPeer)
 	}
 
+	return nil
+}
+
+func (r *replicaChecker) checkStallStore(region *RegionInfo) Operator {
+	selector := newBalanceSelector(leaderKind, r.filters)
+	for _, peer := range region.GetPeers() {
+		store := r.cluster.getStore(peer.GetStoreId())
+		if !store.isStall() {
+			continue
+		}
+		if region.Leader.GetId() == peer.GetId() {
+			targetStores := r.cluster.getFollowerStores(region)
+			target := selector.SelectTarget(targetStores)
+			if target == nil {
+				return nil
+			}
+			return newTransferLeader(region, region.GetStorePeer(target.GetId()))
+		}
+	}
 	return nil
 }
 
