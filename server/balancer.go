@@ -235,6 +235,11 @@ func (r *replicaChecker) Check(region *RegionInfo) Operator {
 		return op
 	}
 
+	if op := r.checkStallPeer(region); op != nil {
+		log.Infof("Stall get operator %+v", op)
+		return op
+	}
+
 	if len(region.GetPeers()) < r.rep.GetMaxReplicas() {
 		newPeer, _ := r.selectBestPeer(region, r.filters...)
 		if newPeer == nil {
@@ -361,7 +366,7 @@ func (r *replicaChecker) checkOfflinePeer(region *RegionInfo) Operator {
 	return nil
 }
 
-func (r *replicaChecker) checkStallStore(region *RegionInfo) Operator {
+func (r *replicaChecker) checkStallPeer(region *RegionInfo) Operator {
 	selector := newBalanceSelector(leaderKind, r.filters)
 	for _, peer := range region.GetPeers() {
 		store := r.cluster.getStore(peer.GetStoreId())

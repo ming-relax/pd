@@ -35,13 +35,15 @@ const (
 // TODO: Export this to API directly.
 type storeInfo struct {
 	*metapb.Store
-	status *StoreStatus
+	status     *StoreStatus
+	stallCache *idCache
 }
 
 func newStoreInfo(store *metapb.Store) *storeInfo {
 	return &storeInfo{
-		Store:  store,
-		status: newStoreStatus(),
+		Store:      store,
+		status:     newStoreStatus(),
+		stallCache: newIDCache(time.Minute, 5*time.Minute),
 	}
 }
 
@@ -65,6 +67,13 @@ func (s *storeInfo) isBlocked() bool {
 }
 
 func (s *storeInfo) isStall() bool {
+	ok := s.stallCache.get(s.GetId())
+	if ok {
+		return true
+	}
+	if s.status.GetStallMicros() > 0 && !ok {
+		s.stallCache.set(s.GetId())
+	}
 	return s.status.GetStallMicros() > 0
 }
 

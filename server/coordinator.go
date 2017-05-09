@@ -97,7 +97,7 @@ func (c *coordinator) dispatch(region *RegionInfo) *pdpb.RegionHeartbeatResponse
 	}
 
 	// Check replica operator.
-	if c.limiter.operatorCount(leaderKind) >= c.opt.GetLeaderScheduleLimit() {
+	if c.limiter.operatorCount(leaderKind) >= c.opt.GetReplicaScheduleLimit() {
 		return nil
 	}
 	if c.limiter.operatorCount(regionKind) >= c.opt.GetReplicaScheduleLimit() {
