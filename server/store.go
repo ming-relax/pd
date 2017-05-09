@@ -49,8 +49,9 @@ func newStoreInfo(store *metapb.Store) *storeInfo {
 
 func (s *storeInfo) clone() *storeInfo {
 	return &storeInfo{
-		Store:  proto.Clone(s.Store).(*metapb.Store),
-		status: s.status.clone(),
+		Store:      proto.Clone(s.Store).(*metapb.Store),
+		status:     s.status.clone(),
+		stallCache: s.stallCache,
 	}
 }
 
