@@ -32,8 +32,12 @@ func newHotStatusHandler(handler *server.Handler, rd *render.Render) *hotStatusH
 	}
 }
 
-func (h *hotStatusHandler) GetHotRegions(w http.ResponseWriter, r *http.Request) {
-	h.rd.JSON(w, http.StatusOK, h.GetHotWriteRegions())
+func (h *hotStatusHandler) GetHotMajorRegions(w http.ResponseWriter, r *http.Request) {
+	h.rd.JSON(w, http.StatusOK, h.GetHotMinorWriteRegions())
+}
+
+func (h *hotStatusHandler) GetHotMinorRegions(w http.ResponseWriter, r *http.Request) {
+	h.rd.JSON(w, http.StatusOK, h.GetHotMajorWriteRegions())
 }
 
 func (h *hotStatusHandler) GetHotStores(w http.ResponseWriter, r *http.Request) {

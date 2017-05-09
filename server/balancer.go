@@ -817,7 +817,18 @@ func (h *balanceHotRegionScheduler) selectDestStoreByLeader(srcRegion *RegionInf
 	return destPeer
 }
 
-func (h *balanceHotRegionScheduler) GetStatus() map[uint64]*StoreHotRegions {
+func (h *balanceHotRegionScheduler) GetMinorStatus() map[uint64]*StoreHotRegions {
+	h.RLock()
+	defer h.RUnlock()
+	status := make(map[uint64]*StoreHotRegions)
+	for id, stat := range h.minorScoreStatus {
+		clone := *stat
+		status[id] = &clone
+	}
+	return status
+}
+
+func (h *balanceHotRegionScheduler) GetMajorStatus() map[uint64]*StoreHotRegions {
 	h.RLock()
 	defer h.RUnlock()
 	status := make(map[uint64]*StoreHotRegions)

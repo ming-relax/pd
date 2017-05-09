@@ -47,13 +47,22 @@ func (h *Handler) GetSchedulers() ([]string, error) {
 	return c.getSchedulers(), nil
 }
 
-// GetHotWriteRegions gets all hot regions status
-func (h *Handler) GetHotWriteRegions() map[uint64]*StoreHotRegions {
+// GetHotMajorWriteRegions gets all hot regions status
+func (h *Handler) GetHotMajorWriteRegions() map[uint64]*StoreHotRegions {
 	c, err := h.getCoordinator()
 	if err != nil {
 		return nil
 	}
-	return c.getHotWriteRegions()
+	return c.getHotMajorWriteRegions()
+}
+
+// GetHotMinorWriteRegions gets all hot regions status
+func (h *Handler) GetHotMinorWriteRegions() map[uint64]*StoreHotRegions {
+	c, err := h.getCoordinator()
+	if err != nil {
+		return nil
+	}
+	return c.getHotMinorWriteRegions()
 }
 
 // GetHotWriteStores gets all hot write stores status
