@@ -616,6 +616,14 @@ func (h *balanceHotRegionScheduler) balanceByPeer(cluster *clusterInfo, t HotReg
 		return nil, nil, nil
 	}
 
+	switch t {
+	case major:
+		h.adjustBalanceLimitByPeer(srcStoreId)
+	case minor:
+		h.adjustBalanceLimitByMinor(srcStoreId)
+	default:
+	}
+
 	stores := cluster.getStores()
 	var destStoreId uint64
 	for _, i := range h.r.Perm(scoreStatus[srcStoreId].RegionsStatAsPeer.Len()) {
@@ -641,7 +649,6 @@ func (h *balanceHotRegionScheduler) balanceByPeer(cluster *clusterInfo, t HotReg
 		destStoreId = h.selectDestStoreByPeer(destStoreIds, srcRegion, srcStoreId, t)
 		if destStoreId != 0 {
 			srcRegion.WrittenBytes = rs.WrittenBytes
-			h.adjustBalanceLimitByPeer(srcStoreId)
 
 			var srcPeer *metapb.Peer
 			for _, peer := range srcRegion.GetPeers() {
@@ -719,6 +726,18 @@ func (h *balanceHotRegionScheduler) adjustBalanceLimitByPeer(storeID uint64) {
 	avgRegionCount := hotRegionTotalCount / float64(len(h.majorScoreStatus))
 	// Multiplied by hotRegionLimitFactor to avoid transfer back and forth
 	limit := uint64((float64(s.RegionsStatAsPeer.Len()) - avgRegionCount) * hotRegionLimitFactor)
+	h.limit = maxUint64(1, limit)
+}
+func (h *balanceHotRegionScheduler) adjustBalanceLimitByMinor(storeID uint64) {
+	s := h.minorScoreStatus[storeID]
+	var hotRegionTotalCount float64
+	for _, m := range h.majorScoreStatus {
+		hotRegionTotalCount += float64(m.RegionsStatAsLeader.Len())
+	}
+
+	avgRegionCount := hotRegionTotalCount / float64(len(h.minorScoreStatus))
+	// Multiplied by hotRegionLimitFactor to avoid transfer back and forth
+	limit := uint64((float64(s.RegionsStatAsLeader.Len()) - avgRegionCount) * hotRegionLimitFactor)
 	h.limit = maxUint64(1, limit)
 }
 
