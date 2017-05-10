@@ -434,12 +434,12 @@ type StoreHotRegions struct {
 	// Hot regions in this store as the role of Leader
 	WrittenBytesAsLeader uint64      `json:"total_written_bytes_as_leader"`
 	RegionsCountAsLeader int         `json:"regions_count_as_leader"`
-	RegionsStatAsLeader  RegionsStat
+	RegionsStatAsLeader  RegionsStat `json:"_"`
 
 	// Hot regions in this store as the role of Follower or Follower
 	WrittenBytesAsPeer uint64      `json:"total_written_bytes_as_peer"`
 	RegionsCountAsPeer int         `json:"regions_count_as_peer"`
-	RegionsStatAsPeer  RegionsStat
+	RegionsStatAsPeer  RegionsStat `json:"_"`
 }
 
 type balanceHotRegionScheduler struct {
