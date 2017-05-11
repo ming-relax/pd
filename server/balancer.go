@@ -748,7 +748,7 @@ func (h *balanceHotRegionScheduler) adjustBalanceLimitByMinor(storeID uint64) {
 	avgRegionCount := hotRegionTotalCount / float64(len(h.minorScoreStatus))
 	// Multiplied by hotRegionLimitFactor to avoid transfer back and forth
 	limit := uint64(math.Abs((float64(s.RegionsStatAsLeader.Len()) - avgRegionCount)) * hotRegionLimitFactor)
-	h.limit = maxUint64(5, limit)
+	h.limit = maxUint64(1, limit)
 }
 
 func (h *balanceHotRegionScheduler) balanceByLeader1(cluster *clusterInfo, t HotRegionType) (*RegionInfo, *metapb.Peer) {
@@ -801,6 +801,13 @@ func (h *balanceHotRegionScheduler) balanceByLeader1(cluster *clusterInfo, t Hot
 		}
 		if srcRegion.Leader.GetStoreId() == destStoreId {
 			continue
+		}
+		stat, ok := scoreStatus[srcRegion.Leader.GetStoreId()]
+		if !ok {
+			return nil, nil
+		}
+		if scoreStatus[destStoreId].RegionsStatAsPeer.Len()-stat.RegionsStatAsPeer.Len() < 10 {
+			return nil, nil
 		}
 		destPeer := srcRegion.GetStorePeer(destStoreId)
 		if destPeer != nil {
