@@ -174,11 +174,13 @@ func (s *balanceRegionScheduler) Schedule(cluster *clusterInfo) Operator {
 	// Select a peer from the store with most regions.
 	region, oldPeer := scheduleRemovePeer(cluster, s.selector)
 	if region == nil {
+		log.Infof("[%+v]Not get region to remove peer", s.GetName())
 		return nil
 	}
 
 	// We don't schedule region with abnormal number of replicas.
 	if len(region.GetPeers()) != s.rep.GetMaxReplicas() {
+		log.Infof("[%+v] region peer abnormal", s.GetName())
 		return nil
 	}
 
@@ -200,11 +202,13 @@ func (s *balanceRegionScheduler) transferPeer(cluster *clusterInfo, region *Regi
 	checker := newReplicaChecker(s.opt, cluster)
 	newPeer, _ := checker.selectBestPeer(region, scoreGuard)
 	if newPeer == nil {
+		log.Infof("[%+v] cannot select new peer", s.GetName())
 		return nil
 	}
 
 	target := cluster.getStore(newPeer.GetStoreId())
 	if !shouldBalance(source, target, s.GetResourceKind()) {
+		log.Infof("[%+v] no need to balance", s.GetName())
 		return nil
 	}
 	s.limit = adjustBalanceLimit(cluster, s.GetResourceKind())
