@@ -308,14 +308,18 @@ func scheduleRemovePeer(cluster *clusterInfo, s Selector, filters ...Filter) (*R
 
 	source := s.SelectSource(stores, filters...)
 	if source == nil {
+		log.Infof("[schedule] Not get source region")
 		return nil, nil
 	}
 
+	log.Infof("[schedule] get source region %+v", source)
 	region := cluster.randFollowerRegion(source.GetId())
 	if region == nil {
+		log.Info("[schedule] not follow region")
 		region = cluster.randLeaderRegion(source.GetId())
 	}
 	if region == nil {
+		log.Info("[schedule] not leader region")
 		return nil, nil
 	}
 
