@@ -25,7 +25,7 @@ import (
 
 const (
 	runSchedulerCheckInterval = 3 * time.Second
-	collectFactor             = 0.8
+	collectFactor             = 0.95
 	historiesCacheSize        = 1000
 	eventsCacheSize           = 1000
 	maxScheduleRetries        = 10

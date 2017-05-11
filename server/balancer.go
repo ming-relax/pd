@@ -501,7 +501,7 @@ func (h *balanceHotRegionScheduler) Schedule(cluster *clusterInfo) Operator {
 	//	return newPriorityTransferPeer(srcRegionMinor, srcPeerMinor, destPeerMinor)
 	//}
 	//
-	srcRegionMinor, newLeaderMinor := h.balanceByLeader(cluster, minor)
+	srcRegionMinor, newLeaderMinor := h.balanceByLeader1(cluster, minor)
 	if srcRegionMinor != nil {
 		return newPriorityTransferLeader(srcRegionMinor, newLeaderMinor)
 	}
@@ -741,8 +741,67 @@ func (h *balanceHotRegionScheduler) adjustBalanceLimitByMinor(storeID uint64) {
 
 	avgRegionCount := hotRegionTotalCount / float64(len(h.minorScoreStatus))
 	// Multiplied by hotRegionLimitFactor to avoid transfer back and forth
-	limit := uint64((float64(s.RegionsStatAsLeader.Len()) - avgRegionCount) * hotRegionLimitFactor)
-	h.limit = maxUint64(1, limit)
+	limit := uint64(math.Abs((float64(s.RegionsStatAsLeader.Len()) - avgRegionCount)) * hotRegionLimitFactor)
+	h.limit = maxUint64(5, limit)
+}
+
+func (h *balanceHotRegionScheduler) balanceByLeader1(cluster *clusterInfo, t HotRegionType) (*RegionInfo, *metapb.Peer) {
+	var (
+		minWrittenBytes        uint64
+		destStoreId            uint64
+		minHotStoreRegionCount int
+		scoreStatus            map[uint64]*StoreHotRegions
+	)
+	minWrittenBytes = math.MaxUint64
+	minHotStoreRegionCount = math.MaxInt32
+	switch t {
+	case major:
+		scoreStatus = h.majorScoreStatus
+	case minor:
+		scoreStatus = h.minorScoreStatus
+	default:
+		panic("Not supportted hot region type")
+	}
+
+	// select srcStoreId by leader
+	for storeId, statistics := range scoreStatus {
+		if statistics.RegionsStatAsLeader.Len() < 10 {
+			continue
+		}
+
+		if minHotStoreRegionCount > statistics.RegionsStatAsLeader.Len() {
+			minHotStoreRegionCount = statistics.RegionsStatAsLeader.Len()
+			minWrittenBytes = statistics.WrittenBytesAsLeader
+			destStoreId = storeId
+			continue
+		}
+
+		if minHotStoreRegionCount == statistics.RegionsStatAsLeader.Len() && minWrittenBytes > statistics.WrittenBytesAsLeader {
+			minWrittenBytes = statistics.WrittenBytesAsLeader
+			destStoreId = storeId
+		}
+	}
+	if destStoreId == 0 {
+		return nil, nil
+	}
+
+	h.adjustBalanceLimitByMinor(destStoreId)
+	// select srcRegion
+	for _, i := range h.r.Perm(scoreStatus[destStoreId].RegionsStatAsPeer.Len()) {
+		rs := scoreStatus[destStoreId].RegionsStatAsPeer[i]
+		srcRegion := cluster.getRegion(rs.RegionID)
+		if len(srcRegion.DownPeers) != 0 || len(srcRegion.PendingPeers) != 0 {
+			continue
+		}
+		if srcRegion.Leader.GetStoreId() == destStoreId {
+			continue
+		}
+		destPeer := srcRegion.GetStorePeer(destStoreId)
+		if destPeer != nil {
+			return srcRegion, destPeer
+		}
+	}
+	return nil, nil
 }
 
 func (h *balanceHotRegionScheduler) balanceByLeader(cluster *clusterInfo, t HotRegionType) (*RegionInfo, *metapb.Peer) {
