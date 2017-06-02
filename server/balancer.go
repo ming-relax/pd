@@ -615,7 +615,7 @@ func (h *balanceHotRegionScheduler) selectDestStoreByPeer(candidateStoreIDs []ui
 
 	var (
 		destStoreID     uint64
-		minWrittenBytes uint64 = math.MaxUint64
+		minWrittenBytes = uint64(math.MaxUint64)
 	)
 	minRegionsCount := int(math.MaxInt32)
 	for _, storeID := range candidateStoreIDs {
@@ -715,7 +715,7 @@ func (h *balanceHotRegionScheduler) selectDestStoreByLeader(srcRegion *RegionInf
 
 	var (
 		destPeer        *metapb.Peer
-		minWrittenBytes uint64 = math.MaxUint64
+		minWrittenBytes = uint64(math.MaxUint64)
 	)
 	minRegionsCount := int(math.MaxInt32)
 	for storeID, peer := range srcRegion.GetFollowers() {
