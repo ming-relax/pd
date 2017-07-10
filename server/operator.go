@@ -24,7 +24,7 @@ import (
 	"github.com/pingcap/kvproto/pkg/pdpb"
 )
 
-const maxOperatorWaitTime = 5 * time.Minute
+const maxOperatorWaitTime = 10 * time.Minute
 
 // ResourceKind distinguishes different kinds of resources.
 type ResourceKind int
