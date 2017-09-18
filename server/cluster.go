@@ -108,6 +108,7 @@ func (c *RaftCluster) start() error {
 		return nil
 	}
 	c.cachedCluster = cluster
+	// TODO: choose the right classifier when startup
 	c.coordinator = newCoordinator(c.cachedCluster, c.s.scheduleOpt, c.s.hbStreams, namespace.DefaultClassifier)
 	c.quit = make(chan struct{})
 
